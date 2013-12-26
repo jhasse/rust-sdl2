@@ -68,6 +68,12 @@ pub mod ll {
         SDL_WINDOWEVENT_FOCUS_LOST,
         SDL_WINDOWEVENT_CLOSE
     }
+
+    pub enum SDL_MessageBoxFlags {
+        SDL_MESSAGEBOX_ERROR = 0x00000010,
+        SDL_MESSAGEBOX_WARNING = 0x00000020,
+        SDL_MESSAGEBOX_INFORMATION = 0x00000040
+    }
     
     pub type SDL_GLContext = *c_void;
 
@@ -177,6 +183,8 @@ pub mod ll {
         pub fn SDL_GL_GetSwapInterval() -> c_int;
         pub fn SDL_GL_SwapWindow(window: *SDL_Window);
         pub fn SDL_GL_DeleteContext(context: SDL_GLContext);
+        pub fn SDL_ShowSimpleMessageBox(flags: uint32_t, title: *c_char, message: *c_char,
+                                        window: *SDL_Window) ->c_int;
     }
 }
 
@@ -810,4 +818,27 @@ pub fn gl_set_swap_interval(interval: int) -> bool {
 
 pub fn gl_get_swap_interval() -> int {
     unsafe { ll::SDL_GL_GetSwapInterval() as int }
+}
+
+
+#[deriving(Eq)]
+pub enum MessageBoxFlags {
+    Error = ll::SDL_MESSAGEBOX_ERROR as int,
+    Warning = ll::SDL_MESSAGEBOX_WARNING as int,
+    Information = ll::SDL_MESSAGEBOX_INFORMATION as int
+}
+
+pub fn show_simple_message_box(mb_flags: &[MessageBoxFlags], title: &str, message: &str,
+                               parent: Option<&Window>) -> int {
+    let flags = mb_flags.iter().fold(0u32, |flags, flag| { flags | *flag as u32 });
+    unsafe {
+        let window: *ll::SDL_Window = match parent {
+            Some(w) => cast::transmute(&w), None => ptr::null()
+        };
+        title.with_c_str(|t| {
+            message.with_c_str(|m| {
+                ll::SDL_ShowSimpleMessageBox(flags, t, m, window) as int
+            })
+        })
+    }
 }
